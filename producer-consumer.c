@@ -23,38 +23,41 @@ osSemaphoreId sem1;
 osSemaphoreDef(sem1);
 osThreadId T_uart1; //producer
 osThreadId T_uart2; //consumer
-osThreadId	T_main; 
+osThreadId T_main; 
 
 
 void producer (void const *argument) 
 {
 	for (;;) 
 	{
-		osMutexWait(uart_mutex, osWaitForever);
-    for(i=0;i<5;++i){
-			for (j=0;j<4;++j){
-			  SendChar('1');
+           osMutexWait(uart_mutex, osWaitForever);
+           for(i=1;i<5;++i){
+		for (j=1;j<i;++j){
+		     SendChar('1');
 		}
-		osMutexRelease(uart_mutex);
-		osSemaphoreRelease(sem1);
-	   }
-  }
+		SendChar('\n');
+	   } 
+	   osSemaphoreRelease(sem1);
+	   osMutexRelease(uart_mutex);
+	}
+  
 }
 
 void consumer (void const *argument) 
 {
-	for (;;) 
+for (;;) 
 	{
 		osSemaphoreWait(sem1, osWaitForever);
 		osMutexWait(uart_mutex, osWaitForever);
-		for (i=5; i>=0; --i){
-			for (j=0; j<=i; ++j){
-				SendChar('0');
+		for (i=5; i>=1; --i){
+			for (j=1; j<=i; ++j){
+				SendChar('*');
+			}
+			SendChar('\n');
+		}
 		osMutexRelease(uart_mutex);
 	}
  }
-}
-	}
 int main (void) 
 {
 	osKernelInitialize (); 	// initialize CMSIS-RTOS
@@ -63,7 +66,7 @@ int main (void)
 	uart_mutex = osMutexCreate(osMutex(uart_mutex));					//create the message queue
 	T_uart1 = osThreadCreate(osThread(producer), NULL);
 	T_uart2 =	osThreadCreate(osThread(consumer), NULL);
-	
+	sem1 = osSemaphoreCreate(osSemaphore(sem1), 0);	
 	osKernelStart ();  
 }
 
