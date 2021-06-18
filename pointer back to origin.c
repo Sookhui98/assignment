@@ -21,7 +21,7 @@ osSemaphoreId sem1;
 osSemaphoreDef(sem1);
 osThreadId T_uart1; //producer
 osThreadId T_uart2; //consumer
-osThreadId	T_main; 
+osThreadId T_main; 
 
 
 void producer (void const *argument) 
@@ -30,16 +30,12 @@ void producer (void const *argument)
 	{
 		osMutexWait(uart_mutex, osWaitForever);
 		for(i=0;i<5;i++){
-				buffer[i]=data[i];
-        writepointer++;		
-        bufferlength++;	
-		}
-		if (writepointer==bufferlength){  
-			  writepointer=0;  ////let writepointer back to origin
-			}
+		buffer[i]=data[i];
+                writepointer = (writepointer+1) % size;	  //return writepointer to 0 after it reached 5		
+	}
 
 		osSemaphoreRelease(sem1);
-	  osMutexRelease(uart_mutex);
+	        osMutexRelease(uart_mutex);
 	   }
   }
 
@@ -50,14 +46,10 @@ void consumer (void const *argument)
 		osSemaphoreWait(sem1, osWaitForever);
 		osMutexWait(uart_mutex, osWaitForever);
 		for(i=0;i<5;i++){
-				buffer[i]=clear[i];	
-			  readpointer++;
-        bufferlength--;			
-		}
-		if (bufferlength==0){
-		readpointer=0;       //let readpointer back to origin 
-		}
-	
+		buffer[i]=clear[i];	
+	        readpointer = (readpointer+1) % size;	  //return readpointer to 0 after it reached 5	
+         }
+		
 		osMutexRelease(uart_mutex);
 	}
  }
@@ -67,10 +59,10 @@ int main (void)
 	osKernelInitialize (); 	// initialize CMSIS-RTOS
 	
 	USART1_Init ();
-	uart_mutex = osMutexCreate(osMutex(uart_mutex));					//create the message queue
+	uart_mutex = osMutexCreate(osMutex(uart_mutex));	//create the message queue
 	T_uart1 = osThreadCreate(osThread(producer), NULL);
-	T_uart2 =	osThreadCreate(osThread(consumer), NULL);
-	sem1 = osSemaphoreCreate(osSemaphore(sem1), 0);	
+	T_uart2 = osThreadCreate(osThread(consumer), NULL);
+	sem1 = osSemaphoreCreate(osSemaphore(sem1), 0);	       //token initialised in sem1 = 0
 	
 	osKernelStart ();  
 }
