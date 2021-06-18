@@ -41,6 +41,9 @@ void producer (void const *argument)
 		writepointer=(writepointer+1)%size;	
 	        osMutexRelease(uart_mutex);
 		osSemaphoreRelease(inserted_item);
+		if (value == 0x3A){
+			value = 0x30;
+		}
 
 	   }
   }
@@ -55,6 +58,9 @@ void consumer (void const *argument)
 		readpointer=(readpointer+1)%size;	
 		osMutexRelease(uart_mutex);
 		osSemaphoreRelease(space);
+		if (readpointer % 5) == 0){
+			SendChar ('\n");
+		}
 
 	}
  }
