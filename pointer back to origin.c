@@ -1,24 +1,20 @@
 #include "stm32f10x.h"
 #include "cmsis_os.h"
 #include "uart.h"
-#include "Board_LED.h"
 
-osMessageQId Q_LED;																		//define the message queue
-osMessageQDef (Q_LED,0x16,unsigned char);
-osEvent  result;
-osMutexId uart_mutex;
+osMutexId uart_mutex; 
 osMutexDef(uart_mutex);
-int size = 5;
+const unsigned int size = 5;
 int data[5]={1,2,2,4,4};
 int clear[5] ={0,0,0,0,0};
-int buffer[5];
+int buffer[size];
 void producer (void const *argument);																
 void consumer (void const *argument);
 int bufferlength = 0;
 int readpointer = 0;
 int writepointer = 0;
-int j,i;
-int z=0;
+int i;
+
 osThreadDef(producer, osPriorityNormal, 1, 0);
 osThreadDef(consumer, osPriorityAboveNormal, 1, 0);
 osSemaphoreId sem1;									
@@ -42,13 +38,6 @@ void producer (void const *argument)
 			  writepointer=0;  ////let writepointer back to origin
 			}
 
- /*   for(i=1;i<=5;++i){
-			for (j=1;j<=i;++j){
-				buffer[z]=data[z];
-			  SendChar('*');		
-		}
-			SendChar('\n');
-	}*/
 		osSemaphoreRelease(sem1);
 	  osMutexRelease(uart_mutex);
 	   }
@@ -68,12 +57,7 @@ void consumer (void const *argument)
 		if (bufferlength==0){
 		readpointer=0;       //let readpointer back to origin 
 		}
-	/*for (i=5; i>=1; --i){
-			for (j=1; j<=i; ++j){
-				SendChar('i');			
-			}
-			SendChar('\n');
-		}*/
+	
 		osMutexRelease(uart_mutex);
 	}
  }
