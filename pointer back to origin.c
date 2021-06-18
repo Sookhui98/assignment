@@ -19,6 +19,8 @@ osThreadDef(consumer, osPriorityNormal, 1, 0);
 
 osSemaphoreId inserted_item;									
 osSemaphoreDef(inserted_item);
+osSemaphoreId space;
+osSemaphoreDef(space);
 
 
 osThreadId T_uart1; //producer
@@ -30,6 +32,7 @@ void producer (void const *argument)
 {
 	for (;;) 
 	{
+		osSemaphoreWait(space,osWaitForver);
 		osMutexWait(uart_mutex, osWaitForever);
 		buffer[i]=data[i];
 		writepointer=(writepointer+1)%size;	
@@ -48,6 +51,7 @@ void consumer (void const *argument)
 		buffer[i]=clear[i];	
 		readpointer=(readpointer+1)%size;	
 		osMutexRelease(uart_mutex);
+		osSemaphoreRelease(space);
 	}
  }
 
