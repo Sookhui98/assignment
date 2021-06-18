@@ -5,23 +5,25 @@
 osMutexId uart_mutex; 
 osMutexDef(uart_mutex);
 const unsigned int size = 5;
-int buffer[size];
+unsigned char buffer[size];
+
 
 void producer (void const *argument);																
 void consumer (void const *argument);
 
-int readpointer = 0;
-int writepointer = 0;
-int i;
+unsigned int readpointer = 0;
+unsigned int writepointer = 0;
+unsigned int value = 0X30;
+unsigned int data = 0x00;
+
 
 osThreadDef(producer, osPriorityNormal, 1, 0);
 osThreadDef(consumer, osPriorityNormal, 1, 0);
 
 osSemaphoreId inserted_item;									
 osSemaphoreDef(inserted_item);
-osSemaphoreId space;
+osSemaphoreId space;									
 osSemaphoreDef(space);
-
 
 osThreadId T_uart1; //producer
 osThreadId T_uart2; //consumer
@@ -32,9 +34,10 @@ void producer (void const *argument)
 {
 	for (;;) 
 	{
-		osSemaphoreWait(space,osWaitForver);
+		osSemaphoreWait(space, osWaitForever);  
 		osMutexWait(uart_mutex, osWaitForever);
-		buffer[i]=data[i];
+		buffer[writepointer]=value;
+		value++
 		writepointer=(writepointer+1)%size;	
 	        osMutexRelease(uart_mutex);
 		osSemaphoreRelease(inserted_item);
@@ -48,10 +51,11 @@ void consumer (void const *argument)
 	{
 		osSemaphoreWait(inserted_item, osWaitForever);
 		osMutexWait(uart_mutex, osWaitForever);
-		buffer[i]=clear[i];	
+		data=buffer[readpointer];	
 		readpointer=(readpointer+1)%size;	
 		osMutexRelease(uart_mutex);
 		osSemaphoreRelease(space);
+
 	}
  }
 
@@ -61,7 +65,8 @@ int main (void)
 	USART1_Init ();
 	uart_mutex = osMutexCreate(osMutex(uart_mutex));					//create the message queue
 	T_uart1 = osThreadCreate(osThread(producer), NULL);
-	T_uart2 =	osThreadCreate(osThread(consumer), NULL);
+	T_uart2 = osThreadCreate(osThread(consumer), NULL);
 	inserted_item = osSemaphoreCreate(osSemaphore(inserted_item), 0);
+	space = osSemaphoreCreate(osSemaphore(space), size);
 	osKernelStart ();  
 }
