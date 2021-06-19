@@ -14,13 +14,13 @@ void consumer (void const *argument);
 
 unsigned int writepointer = 0;
 unsigned int readpointer = 0;
-unsigned int variable = 0x30;
-//unsigned int variable = 0x41;  Testing code, the variable become alphabet instead of integer
+//unsigned int variable = 0x30;
+unsigned int variable = 0x41; //Testing code, the variable become alphabet instead of integer
 unsigned int data = 0x00;
 
 
 osThreadDef(producer, osPriorityNormal, 1, 0);
-osThreadDef(consumer, osPriorityNormal, 1, 0);
+osThreadDef(consumer, osPriorityAboveNormal, 1, 0);
 
 osSemaphoreId inserted_item;									
 osSemaphoreDef(inserted_item);
@@ -37,12 +37,15 @@ void producer (void const *argument)
 		osMutexWait(uart_mutex, osWaitForever);
 		buffer[writepointer]=variable;
 		variable++;
-   		writepointer=(writepointer+1)%size;		
+    		writepointer=(writepointer+1)%size;		
 		osMutexRelease(uart_mutex);
 		osSemaphoreRelease(inserted_item); //item inserted signal
 	  if (variable == 0x3A){
 				variable = 0x30;
-				}      
+				}  
+		/*if (variable == 0x5A){
+				variable = 0x41;
+				} */ //Reset the value of variable
 	   }
   }
 
