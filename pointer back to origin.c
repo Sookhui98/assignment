@@ -14,8 +14,8 @@ void consumer (void const *argument);
 
 unsigned int writepointer = 0;
 unsigned int readpointer = 0;
-//unsigned int variable = 0x30;
-unsigned int variable = 0x41; //Testing code, the variable become alphabet instead of integer
+unsigned int variable = 0x30;
+//unsigned int variable = 0x41; //Testing code, the variable become alphabet instead of integer
 unsigned int data = 0x00;
 
 
