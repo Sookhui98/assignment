@@ -3,24 +3,29 @@
 #include "uart.h"
 
 const unsigned int size = 6;
-unsigned int N2=size/2;
 unsigned char buffer[size];
-void producer1 (void const *argument);																
-void consumer (void const *argument);
+
+void producer1 (void const *argument);	
 void producer2 (void const *argument);
+void consumer (void const *argument);
+void checking_data (void const *argument);
 
 unsigned int writepointer = 0;
 unsigned int readpointer = 0;
-unsigned char variable = 0x30; //send integer number
-unsigned char variable2 = 0x41; //send alphabet
+unsigned char variable = 0x30;   //Producer 1 send integer value from 0,1,2,3,....,9
+unsigned char variable2 = 0x41;  // Producer 2 send uppercase alphabet from A,B,C,D,.....,Z
 unsigned char data = 0x00;
-unsigned char count = 0x30;
+
+unsigned char check_read_data[size];
+
 
 long int i;
 
 osThreadDef(producer1, osPriorityNormal, 1, 0);
 osThreadDef(consumer, osPriorityNormal, 1, 0);
 osThreadDef(producer2, osPriorityNormal, 1, 0);
+osThreadDef(checking_data, osPriorityAboveNormal, 1, 0);
+
 osMutexId uart_mutex;
 osMutexDef(uart_mutex);
 
@@ -28,10 +33,13 @@ osSemaphoreId inserted_item;
 osSemaphoreDef(inserted_item);
 osSemaphoreId space;									
 osSemaphoreDef(space);
+osSemaphoreId check;	
+osSemaphoreDef (check);
 
-osThreadId T_uart1; //producer put integer data
+osThreadId T_uart1; //producer 1 put integer data, 012345.....9
 osThreadId T_uart2; //consumer 
-osThreadId T_uart3; //producer 2 put alphabet
+osThreadId T_uart3; //producer 2 put uppercase aplhabet data, ABCDEFGH......Z
+osThreadId T_uart4; //checking data
 
 void producer1 (void const *argument) 
 {
@@ -39,12 +47,12 @@ void producer1 (void const *argument)
 	{
 	 if (variable == 0x3A){
 				variable = 0x30;
-				}
+				} //Reset the value of variable
 		osSemaphoreWait(space, osWaitForever);  
 		osMutexWait(uart_mutex, osWaitForever);
 		buffer[writepointer] = variable;
 		variable++;
-                writepointer=(writepointer+1)%size;		
+    writepointer=(writepointer+1)%size;		
 		osMutexRelease(uart_mutex);
 		osSemaphoreRelease(inserted_item); //item inserted signal
 	    
@@ -63,8 +71,8 @@ void producer2 (void const *argument) //
 		osMutexWait(uart_mutex, osWaitForever);
 		buffer[writepointer]=variable2;
 		variable2++;
-                writepointer=(writepointer+1)%size;		
- 		osMutexRelease(uart_mutex);
+    writepointer=(writepointer+1)%size;		
+		osMutexRelease(uart_mutex);
 		osSemaphoreRelease(inserted_item); //item inserted signal
 	   }
 }
@@ -83,21 +91,58 @@ void consumer (void const *argument) //read the data inside the circular buffer
 		SendChar(data);
 		if ((readpointer%size) == 0){
 			SendChar('\n');
+			osSemaphoreRelease(check);
 			}
 	}
 }
+
+void checking_data (void const *argument) //checking data in the circular buffer with the read data
+{ 
+ for(;;)
+ {	
+	 osSemaphoreWait(check,osWaitForever);
+	 osMutexWait(uart_mutex, osWaitForever);
+	 SendChar('\n');
+	 SendChar('c');
+	 SendChar('h');
+	 SendChar('e');
+	 SendChar('c');
+	 SendChar('k');
+	 SendChar('i');
+	 SendChar('n');
+	 SendChar('g');
+	 SendChar('\n');
+	
+	for (i=0; i<size ; i++){
+			if(buffer[i] == check_read_data[i])
+			{
+				SendChar('t'); //lowercase t indicate the value is true
+			}
+			else
+			{
+				SendChar('f'); //lowercase f indicate the value is false
+			}
+	 }
+	SendChar('\n');
+	SendChar('\n');
+	osMutexRelease(uart_mutex);
+ }
+}
+
 
 int main (void) 
 {
 	osKernelInitialize (); 	// initialize CMSIS-RTOS
 	
 	USART1_Init ();
-	uart_mutex = osMutexCreate(osMutex(uart_mutex));					//create the message queue
+	uart_mutex = osMutexCreate(osMutex(uart_mutex));			
 	T_uart1 = osThreadCreate(osThread(producer1), NULL);
 	T_uart3 = osThreadCreate(osThread(producer2), NULL);
 	T_uart2 = osThreadCreate(osThread(consumer), NULL);
+	T_uart4 = osThreadCreate(osThread(checking_data), NULL);
 	
 	inserted_item = osSemaphoreCreate(osSemaphore(inserted_item), 0);	
 	space = osSemaphoreCreate(osSemaphore(space), size);
+	check = osSemaphoreCreate(osSemaphore(check), 0);
 	osKernelStart ();  
 }
