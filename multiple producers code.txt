@@ -1,0 +1,103 @@
+#include "stm32f10x.h"
+#include "cmsis_os.h"
+#include "uart.h"
+
+const unsigned int size = 6;
+unsigned int N2=size/2;
+unsigned char buffer[size];
+void producer1 (void const *argument);																
+void consumer (void const *argument);
+void producer2 (void const *argument);
+
+unsigned int writepointer = 0;
+unsigned int readpointer = 0;
+unsigned char variable = 0x30; //send integer number
+unsigned char variable2 = 0x41; //send alphabet
+unsigned char data = 0x00;
+unsigned char count = 0x30;
+
+long int i;
+
+osThreadDef(producer1, osPriorityNormal, 1, 0);
+osThreadDef(consumer, osPriorityNormal, 1, 0);
+osThreadDef(producer2, osPriorityNormal, 1, 0);
+osMutexId uart_mutex;
+osMutexDef(uart_mutex);
+
+osSemaphoreId inserted_item;									
+osSemaphoreDef(inserted_item);
+osSemaphoreId space;									
+osSemaphoreDef(space);
+
+osThreadId T_uart1; //producer put integer data
+osThreadId T_uart2; //consumer 
+osThreadId T_uart3; //producer 2 put alphabet
+
+void producer1 (void const *argument) 
+{
+	for (;;) 
+	{
+	 if (variable == 0x3A){
+				variable = 0x30;
+				}
+		osSemaphoreWait(space, osWaitForever);  
+		osMutexWait(uart_mutex, osWaitForever);
+		buffer[writepointer] = variable;
+		variable++;
+                writepointer=(writepointer+1)%size;		
+		osMutexRelease(uart_mutex);
+		osSemaphoreRelease(inserted_item); //item inserted signal
+	    
+	   }
+  }
+
+	
+void producer2 (void const *argument) //
+{
+	for (;;) 
+	{
+	  if (variable2 == 0x5B){
+				variable2 = 0x41;
+				}  //Reset the value of variable
+		osSemaphoreWait(space, osWaitForever);  
+		osMutexWait(uart_mutex, osWaitForever);
+		buffer[writepointer]=variable2;
+		variable2++;
+                writepointer=(writepointer+1)%size;		
+ 		osMutexRelease(uart_mutex);
+		osSemaphoreRelease(inserted_item); //item inserted signal
+	   }
+}
+
+void consumer (void const *argument) //read the data inside the circular buffer
+{
+	for (;;) 
+	{
+		osSemaphoreWait(inserted_item, osWaitForever);
+		osMutexWait(uart_mutex, osWaitForever);
+		data=buffer[readpointer];	
+		check_read_data[readpointer] = data;
+		readpointer=(readpointer+1)%size;		
+		osMutexRelease(uart_mutex);
+		osSemaphoreRelease(space);
+		SendChar(data);
+		if ((readpointer%size) == 0){
+			SendChar('\n');
+			}
+	}
+}
+
+int main (void) 
+{
+	osKernelInitialize (); 	// initialize CMSIS-RTOS
+	
+	USART1_Init ();
+	uart_mutex = osMutexCreate(osMutex(uart_mutex));					//create the message queue
+	T_uart1 = osThreadCreate(osThread(producer1), NULL);
+	T_uart3 = osThreadCreate(osThread(producer2), NULL);
+	T_uart2 = osThreadCreate(osThread(consumer), NULL);
+	
+	inserted_item = osSemaphoreCreate(osSemaphore(inserted_item), 0);	
+	space = osSemaphoreCreate(osSemaphore(space), size);
+	osKernelStart ();  
+}
